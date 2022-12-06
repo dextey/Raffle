@@ -30,5 +30,7 @@ describe("Raffle", () => {
       // console.log(players);
       assert.equal(players[0], accounts.deployer);
     });
+
+    it("Raffle entry Event emitted", async () => {});
   });
 });
