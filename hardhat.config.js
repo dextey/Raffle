@@ -1,5 +1,5 @@
-require("@nomicfoundation/hardhat-toolbox");
-require("hardhat-deploy");
+require("@nomicfoundation/hardhat-toolbox")
+require("hardhat-deploy")
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -22,4 +22,4 @@ module.exports = {
       default: 0,
     },
   },
-};
+}
