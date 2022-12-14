@@ -41,13 +41,20 @@ module.exports = async ({ deployments, getNamedAccounts }) => {
 
   log("Deploying -- Raffle Contract")
   log("=====================================")
-  await deploy("Raffle", {
+  const Raffle = await deploy("Raffle", {
     from: deployer,
     args: args,
     log: true,
     waitConfirmations: network.config.blockConfirmations || 1,
   })
   log("=====================================")
+
+  if (network.config.chainId == 31337) {
+    const vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
+    await vrfCoordinatorV2Mock.addConsumer(subscriptionId.toNumber(), Raffle.address)
+    log("adding consumer...")
+    log("Consumer added!")
+  }
 }
 
 module.exports.tags = ["all", "Raffle"]
