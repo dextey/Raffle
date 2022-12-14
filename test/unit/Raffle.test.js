@@ -100,5 +100,70 @@ const { developmentChains } = require("../../helper.config")
             .to.be.revertedWithCustomError(Raffle, `Raffle_UpkeepNotNeeded`)
             .withArgs("0", "0", "0")
         })
+        it("Emits an event and call the vrfCoordinator", async () => {
+          await Raffle.enterRaffle({ value: ethers.utils.parseEther("0.2") })
+          await network.provider.send("evm_increaseTime", [31])
+          await network.provider.send("evm_mine", [])
+          const txResponse = await Raffle.performUpkeep([])
+          const txReceipt = await txResponse.wait(1)
+          const requestId = txReceipt.events[1].args.requestId
+          const raffleState = await Raffle.getRaffleState()
+          // console.log(requestId.toString(), raffleState)
+          assert(requestId.toNumber() > 0)
+          assert(raffleState, 1)
+        })
+      })
+
+      describe("FulFillRandomWords", () => {
+        beforeEach(async () => {
+          await Raffle.enterRaffle({ value: ethers.utils.parseEther("0.2") })
+          await network.provider.send("evm_increaseTime", [31])
+          await network.provider.send("evm_mine", [])
+        })
+
+        it("Can only be called by performUpkeep", async () => {
+          await expect(
+            vrfCoordinatorV2Mock.fulfillRandomWords(0, Raffle.address)
+          ).to.be.revertedWith("nonexistent request")
+        })
+
+        it("Picks a winner & transfer prize and Resets the Raffle", async () => {
+          const newAccounts = await ethers.getSigners()
+          // adding more players in Raffle
+          for (let i = 1; i < 4; ++i) {
+            const playerContract = Raffle.connect(newAccounts[i])
+            playerContract.enterRaffle({ value: ethers.utils.parseEther("0.2") })
+          }
+
+          const timeStamp = await Raffle.getLastestTimestamp()
+
+          await new Promise(async (resolve, reject) => {
+            Raffle.once("RaffleWinnerPicked", async () => {
+              try {
+                const recentWinner = await Raffle.getRecentWinner()
+                const raffleState = await Raffle.getRaffleState()
+                const players = await Raffle.getPlayers()
+                const endtimeStamp = await Raffle.getLastestTimestamp()
+                const newWinnerBalance = await newAccounts[1].getBalance()
+                assert.equal(players.length, 0)
+                assert.equal(raffleState, 0)
+                assert(endtimeStamp > timeStamp)
+                assert.equal(recentWinner, newAccounts[1].address)
+                assert.equal(
+                  newWinnerBalance.toString(),
+                  winnerBalance.add(ethers.utils.parseEther("0.2").mul(4)).toString()
+                )
+              } catch (error) {
+                reject(error)
+              }
+              resolve()
+            })
+            const tx = await Raffle.performUpkeep([])
+            const txReceipt = await tx.wait(1)
+            const winnerBalance = await newAccounts[1].getBalance()
+            const requestId = await txReceipt.events[1].args.requestId
+            await vrfCoordinatorV2Mock.fulfillRandomWords(requestId, Raffle.address)
+          })
+        })
       })
     })
