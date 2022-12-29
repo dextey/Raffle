@@ -1,5 +1,6 @@
 import "../styles/globals.css"
 import Head from "next/head"
+import { MoralisProvider } from "react-moralis"
 
 function MyApp({ Component, pageProps }) {
   return (
@@ -7,7 +8,9 @@ function MyApp({ Component, pageProps }) {
       <Head>
         <title>Raffle</title>
       </Head>
-      <Component {...pageProps} />
+      <MoralisProvider initializeOnMount={false}>
+        <Component {...pageProps} />
+      </MoralisProvider>
     </>
   )
 }
